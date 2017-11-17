@@ -1,6 +1,10 @@
-package io.koto.common
+package io.koto.json
 
-sealed class Json : MutableMap<String, Json>, MutableList<Json> {
+fun json(json: String) = Json.parse(json)
+fun obj(vararg pairs : Pair<String, Any?>) = Json.jsonObject(*pairs)
+fun arr(vararg objs: Any?) = Json.jsonArray(*objs)
+
+abstract class Json : MutableMap<String, Json>, MutableList<Json> {
     class JException(message: String?) : Exception(message)
     companion object {
         internal fun error(msg:String? = null) : Nothing = throw JException(msg)
@@ -13,14 +17,23 @@ sealed class Json : MutableMap<String, Json>, MutableList<Json> {
                 else -> JString(toString())
             }
         }
+
         fun parse(json: String) = JParser(json).parse()
-        fun obj(vararg pairs : Pair<String, Any?>) = JObject().apply {
+        fun jsonObject(vararg pairs : Pair<String, Any?>) = JObject().apply {
             pairs.forEach { put(it.first, jelement(it.second)) }
         }
-        fun array(vararg objs: Any?) = JArray().apply {
+
+        fun jsonArray(vararg objs: Any?) = JArray().apply {
             objs.forEach { add(jelement(it)) }
         }
     }
+
+    fun isNull() = this is JNull
+    fun isBool() = this is JBool
+    fun isString() = this is JString
+    fun isNumber() = this is JNumber
+    fun isObject() = this is JObject
+    fun isArray() = this is JArray
 
     open fun bool() : Boolean = error()
     open fun string() : String = error()
@@ -28,6 +41,9 @@ sealed class Json : MutableMap<String, Json>, MutableList<Json> {
     open fun float() : Float = error()
     open fun double() : Double = error()
     open fun jnull() : JNull = error()
+    open fun obj() : MutableMap<String, Json> = error()
+    open fun arr() : MutableList<Json> = error()
+
     open fun json() : String = error()
     override fun toString(): String = json()
 
@@ -66,18 +82,19 @@ sealed class Json : MutableMap<String, Json>, MutableList<Json> {
         set(index, JBool(obj))
     }
 
-    open fun add(obj: Number) {
-        add(JNumber(obj))
-    }
-    open fun add(obj: String?) {
-        add(if(obj!=null){JString(obj)}else{JNull})
-    }
-    open fun add(obj: Boolean) {
-        add(JBool(obj))
-    }
-    operator fun plusAssign(obj: Number) = add(obj)
-    operator fun plusAssign(obj: String?) = add(obj)
-    operator fun plusAssign(obj: Boolean) = add(obj)
+//    open fun add(obj: Number) {
+//        add(JNumber(obj))
+//    }
+//    open fun add(obj: String?) {
+//        add(if(obj!=null){JString(obj)}else{JNull})
+//    }
+//    open fun add(obj: Boolean) {
+//        add(JBool(obj))
+//    }
+//    operator fun plusAssign(obj: Number) = add(obj)
+//    operator fun plusAssign(obj: String?) = add(obj)
+//    operator fun plusAssign(obj: Boolean) = add(obj)
+    operator fun plusAssign(obj: Any?) { add(jelement(obj)) }
 
     //for interface MutableMap
 //    override val size: Int = error()
@@ -127,6 +144,7 @@ sealed class Json : MutableMap<String, Json>, MutableList<Json> {
     }
 
     class JObject : Json() {
+        override fun obj() = map
         private val map = mutableMapOf<String, Json>()
         override val size: Int get() = map.size
         override fun containsKey(key: String): Boolean = map.containsKey(key)
@@ -141,10 +159,10 @@ sealed class Json : MutableMap<String, Json>, MutableList<Json> {
         override fun putAll(from: Map<out String, Json>) = map.putAll(from)
         override fun remove(key: String): Json? = map.remove(key)
         override fun json(): String = map.entries.joinToString(",", "{", "}") { "\"${it.key}\":${it.value}" }
-
     }
 
     class JArray : Json() {
+        override fun arr() = list
         private val list = mutableListOf<Json>()
         override val size: Int get() = list.size
         override fun contains(element: Json): Boolean = list.contains(element)
