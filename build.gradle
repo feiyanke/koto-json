@@ -1,0 +1,36 @@
+apply plugin: 'kotlin'
+apply plugin: 'maven'
+group 'com.github.feiyanke'
+version '1.0'
+
+buildscript {
+    ext.kotlin_version = '1.1.51'
+
+    repositories {
+        maven { url 'http://maven.aliyun.com/nexus/content/repositories/central/' }
+        jcenter()
+        mavenCentral()
+    }
+    dependencies {
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+    }
+}
+
+sourceSets {
+    examples {
+        kotlin {
+        }
+    }
+}
+
+repositories {
+    maven { url 'http://maven.aliyun.com/nexus/content/repositories/central/' }
+    jcenter()
+    mavenCentral()
+}
+
+dependencies {
+    compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+    examplesCompile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+    examplesCompile sourceSets.main.output
+}
