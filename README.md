@@ -74,3 +74,13 @@ val jobj1 = jobject.entries.removeIf {
 }
 ```
 
+### Json (de)serializers
+```kotlin
+//serializers
+val json_str = jobj1.toString()
+
+//deserializers
+val json_obj = json(json_str)
+}
+```
+
