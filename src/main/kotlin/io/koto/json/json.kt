@@ -1,13 +1,55 @@
 package io.koto.json
 
-fun json(json: String) = Json.parse(json)
-fun obj(vararg pairs : Pair<String, Any?>) = Json.jsonObject(*pairs)
-fun arr(vararg objs: Any?) = Json.jsonArray(*objs)
+import com.google.gson.JsonParseException
+import com.google.gson.stream.JsonReader
+import com.google.gson.stream.JsonToken
+import com.google.gson.stream.MalformedJsonException
+import java.io.Reader
+import java.io.StringReader
+
 
 abstract class Json : MutableMap<String, Json>, MutableList<Json> {
-    class JException(message: String?) : Exception(message)
+
     companion object {
-        internal fun error(msg:String? = null) : Nothing = throw JException(msg)
+
+        private fun JsonReader.parse(): Json {
+            return when(peek()) {
+                JsonToken.BEGIN_ARRAY -> parseArray()
+                JsonToken.BEGIN_OBJECT -> parseObject()
+                JsonToken.STRING -> Json.JString(nextString())
+                JsonToken.NUMBER -> Json.JNumber(nextDouble())
+                JsonToken.BOOLEAN -> Json.JBool(nextBoolean())
+                JsonToken.NULL -> Json.JNull
+                else -> throw MalformedJsonException("Token(${peek().name}) is not expected!")
+            }
+        }
+
+        private fun JsonReader.parseObject(): Json.JObject {
+            return Json.JObject().apply {
+                beginObject()
+                while (hasNext()) {
+                    parsePair().let {
+                        put(it.first, it.second)
+                    }
+                }
+                endObject()
+            }
+        }
+
+        private fun JsonReader.parsePair(): Pair<String, Json> {
+            return nextName() to parse()
+        }
+
+        private fun JsonReader.parseArray(): Json.JArray {
+            return Json.JArray().apply {
+                beginArray()
+                while (hasNext()) {
+                    add(parse())
+                }
+                endArray()
+            }
+        }
+
         private fun jelement(obj:Any?) : Json {
             return if (obj == null) { JNull } else when(obj) {
                 is Number -> JNumber(obj)
@@ -18,7 +60,10 @@ abstract class Json : MutableMap<String, Json>, MutableList<Json> {
             }
         }
 
-        fun parse(json: String) = JParser(json).parse()
+        fun parse(reader:Reader) = JsonReader(reader).parse()
+
+        fun parse(json: String) = parse(StringReader(json))
+
         fun jsonObject(vararg pairs : Pair<String, Any?>) = JObject().apply {
             pairs.forEach { put(it.first, jelement(it.second)) }
         }
@@ -28,48 +73,47 @@ abstract class Json : MutableMap<String, Json>, MutableList<Json> {
         }
     }
 
-    fun isNull() = this is JNull
+    fun isNull() = this === JNull
     fun isBool() = this is JBool
     fun isString() = this is JString
     fun isNumber() = this is JNumber
     fun isObject() = this is JObject
     fun isArray() = this is JArray
 
-    open fun bool() : Boolean = error()
-    open fun string() : String = error()
-    open fun int() : Int = error()
-    open fun float() : Float = error()
-    open fun double() : Double = error()
-    open fun jnull() : JNull = error()
-    open fun obj() : MutableMap<String, Json> = error()
-    open fun arr() : MutableList<Json> = error()
-
-    open fun json() : String = error()
+    open fun bool() : Boolean = throw TypeCastException()
+    open fun string() : String = throw TypeCastException()
+    open fun int() : Int = throw TypeCastException()
+    open fun float() : Float = throw TypeCastException()
+    open fun double() : Double = throw TypeCastException()
+    open fun jnull() : JNull = throw TypeCastException()
+    open fun obj() : MutableMap<String, Json> = throw TypeCastException()
+    open fun arr() : MutableList<Json> = throw TypeCastException()
+    abstract fun json() : String
     override fun toString(): String = json()
 
 
     //for interface MutableList
-    override val size: Int get() = error()
-    override fun contains(element: Json): Boolean = error()
-    override fun containsAll(elements: Collection<Json>): Boolean  = error()
-    override fun get(index: Int): Json = error()
-    override fun indexOf(element: Json): Int = error()
-    override fun isEmpty(): Boolean = error()
-    override fun iterator(): MutableIterator<Json> = error()
-    override fun lastIndexOf(element: Json): Int = error()
-    override fun add(element: Json): Boolean = error()
-    override fun add(index: Int, element: Json): Unit = error()
-    override fun addAll(index: Int, elements: Collection<Json>): Boolean = error()
-    override fun addAll(elements: Collection<Json>): Boolean = error()
-    override fun clear(): Unit = error()
-    override fun listIterator() : MutableListIterator<Json> = error()
-    override fun listIterator(index: Int): MutableListIterator<Json> = error()
-    override fun remove(element: Json): Boolean = error()
-    override fun removeAll(elements: Collection<Json>): Boolean = error()
-    override fun removeAt(index: Int): Json = error()
-    override fun retainAll(elements: Collection<Json>): Boolean = error()
-    override fun set(index: Int, element: Json): Json = error()
-    override fun subList(fromIndex: Int, toIndex: Int): MutableList<Json> = error()
+    override val size: Int get() = throw JsonParseException("illegal action for the element")
+    override fun contains(element: Json): Boolean = throw JsonParseException("Can not do that for this Json element")
+    override fun containsAll(elements: Collection<Json>): Boolean  = throw JsonParseException("illegal action for the element")
+    override fun get(index: Int): Json = throw JsonParseException("illegal action for the element")
+    override fun indexOf(element: Json): Int = throw JsonParseException("illegal action for the element")
+    override fun isEmpty(): Boolean = throw JsonParseException("illegal action for the element")
+    override fun iterator(): MutableIterator<Json> = throw JsonParseException("illegal action for the element")
+    override fun lastIndexOf(element: Json): Int = throw JsonParseException("illegal action for the element")
+    override fun add(element: Json): Boolean = throw JsonParseException("illegal action for the element")
+    override fun add(index: Int, element: Json): Unit = throw JsonParseException("illegal action for the element")
+    override fun addAll(index: Int, elements: Collection<Json>): Boolean = throw JsonParseException("illegal action for the element")
+    override fun addAll(elements: Collection<Json>): Boolean = throw JsonParseException("illegal action for the element")
+    override fun clear(): Unit = throw JsonParseException("illegal action for the element")
+    override fun listIterator() : MutableListIterator<Json> = throw JsonParseException("illegal action for the element")
+    override fun listIterator(index: Int): MutableListIterator<Json> = throw JsonParseException("illegal action for the element")
+    override fun remove(element: Json): Boolean = throw JsonParseException("illegal action for the element")
+    override fun removeAll(elements: Collection<Json>): Boolean = throw JsonParseException("illegal action for the element")
+    override fun removeAt(index: Int): Json = throw JsonParseException("illegal action for the element")
+    override fun retainAll(elements: Collection<Json>): Boolean = throw JsonParseException("illegal action for the element")
+    override fun set(index: Int, element: Json): Json = throw JsonParseException("illegal action for the element")
+    override fun subList(fromIndex: Int, toIndex: Int): MutableList<Json> = throw JsonParseException("illegal action for the element")
 
     //for json array
     open operator fun set(index: Int, obj: Number) {
@@ -82,33 +126,18 @@ abstract class Json : MutableMap<String, Json>, MutableList<Json> {
         set(index, JBool(obj))
     }
 
-//    open fun add(obj: Number) {
-//        add(JNumber(obj))
-//    }
-//    open fun add(obj: String?) {
-//        add(if(obj!=null){JString(obj)}else{JNull})
-//    }
-//    open fun add(obj: Boolean) {
-//        add(JBool(obj))
-//    }
-//    operator fun plusAssign(obj: Number) = add(obj)
-//    operator fun plusAssign(obj: String?) = add(obj)
-//    operator fun plusAssign(obj: Boolean) = add(obj)
     operator fun plusAssign(obj: Any?) { add(jelement(obj)) }
 
     //for interface MutableMap
-//    override val size: Int = error()
-    override fun containsKey(key: String): Boolean = error()
-    override fun containsValue(value: Json): Boolean = error()
-    override fun get(key: String): Json = error()
-    //    override fun isEmpty(): Boolean = error()
-    override val entries: MutableSet<MutableMap.MutableEntry<String, Json>> get() = error()
-    override val keys: MutableSet<String> get() = error()
-    override val values: MutableCollection<Json> get() = error()
-    //    override fun clear(): Unit = error()
-    override fun put(key: String, value: Json): Json? = error()
-    override fun putAll(from: Map<out String, Json>): Unit = error()
-    override fun remove(key: String): Json? = error()
+    override fun containsKey(key: String): Boolean = throw JsonParseException("illegal action for the element")
+    override fun containsValue(value: Json): Boolean = throw JsonParseException("illegal action for the element")
+    override fun get(key: String): Json = throw JsonParseException("illegal action for the element")
+    override val entries: MutableSet<MutableMap.MutableEntry<String, Json>> get() = throw JsonParseException("illegal action for the element")
+    override val keys: MutableSet<String> get() = throw JsonParseException("illegal action for the element")
+    override val values: MutableCollection<Json> get() = throw JsonParseException("illegal action for the element")
+    override fun put(key: String, value: Json): Json? = throw JsonParseException("illegal action for the element")
+    override fun putAll(from: Map<out String, Json>): Unit = throw JsonParseException("illegal action for the element")
+    override fun remove(key: String): Json? = throw JsonParseException("illegal action for the element")
 
     //for json object
     open operator fun set(key: String, obj: Number) {
@@ -149,7 +178,7 @@ abstract class Json : MutableMap<String, Json>, MutableList<Json> {
         override val size: Int get() = map.size
         override fun containsKey(key: String): Boolean = map.containsKey(key)
         override fun containsValue(value: Json): Boolean = map.containsValue(value)
-        override fun get(key: String): Json = map[key]?: error()
+        override fun get(key: String): Json = map[key]?: throw JsonParseException("does not contain the key")
         override fun isEmpty(): Boolean = map.isEmpty()
         override val entries: MutableSet<MutableMap.MutableEntry<String, Json>> get() = map.entries
         override val keys: MutableSet<String> get() = map.keys
@@ -159,6 +188,12 @@ abstract class Json : MutableMap<String, Json>, MutableList<Json> {
         override fun putAll(from: Map<out String, Json>) = map.putAll(from)
         override fun remove(key: String): Json? = map.remove(key)
         override fun json(): String = map.entries.joinToString(",", "{", "}") { "\"${it.key}\":${it.value}" }
+
+        fun String.to(value: Number) = put(this, JNumber(value))
+        fun String.to(value: String) = put(this, JString(value))
+        fun String.to(value: Boolean) = put(this, JBool(value))
+        fun String.to(value: Json) = put(this, value)
+        fun String.to(value: JNull?) = put(this, JNull)
     }
 
     class JArray : Json() {
@@ -188,189 +223,7 @@ abstract class Json : MutableMap<String, Json>, MutableList<Json> {
         override fun json(): String = list.joinToString(",","[","]")
     }
 
-    private class JParser(val json:String) {
-        private var at = 0
-        private fun next() = json[at++]
-        private val c : Char
-            get() = json[at]
-        private fun s(n:Int) : String {
-            return json.substring(at until at+n)
-        }
-        private val spaces = listOf(' ', '\t', '\b', '\n', 'r')
-        private fun escapeSpace() {
-            while (c in spaces) {
-                next()
-            }
-        }
-        private fun isNext(str:String):Boolean {
-            val v = try { s(str.length) == str } catch (e: Throwable) { false }
-            at += str.length
-            return v
-        }
-        private fun parseNull() : JNull {
-            if (isNext("null")) {
-                return JNull
-            } else {
-                error()
-            }
-        }
-        private fun parseTrue() : Boolean {
-            if (isNext("true")) {
-                return true
-            } else {
-                error()
-            }
-        }
-        private fun parseFalse() : Boolean {
-            if (isNext("false")) {
-                return false
-            } else {
-                error()
-            }
-        }
-        private val escapes = mapOf(
-                'b' to '\b',
-                'n' to '\n',
-                't' to '\t',
-                'r' to '\r',
-                '\"' to '\"',
-                '\\' to '\\'
-        )
-        private fun parseString() : String {
-            return buildString {
-                try {
-                    next()
-                    while (c!='\"') {
-                        if (c == '\\') {
-                            next()
-                            if (c == 'u') {
-                                appendCodePoint(s(4).toInt(16))
-                            } else {
-                                append(escapes[c])
-                            }
-                        } else {
-                            append(c)
-                        }
-                        next()
-                    }
-                    next()
-                } catch (e:Throwable) {
-                    error()
-                }
-            }
-        }
-        private fun parseDigit() : String {
-            return buildString {
-                do {
-                    append(c)
-                    next()
-                } while (c in '0'..'9')
-            }
-        }
-        private fun parseNumber() : Number {
-            return buildString {
-                if (c=='+' || c=='-') {
-                    append(c)
-                    next()
-                }
-                if (c in '0'..'9') {
-                    append(parseDigit())
-                    if (c == '.') {
-                        append(c)
-                        next()
-                        if (c in '0'..'9') {
-                            append(parseDigit())
-                        }
-                    }
-                    if (c == 'e' || c == 'E') {
-                        append(c)
-                        next()
-                        if (c == '+' || c == '-') {
-                            append(c)
-                            next()
-                        }
-                        if (c in '0'..'9') {
-                            append(parseDigit())
-                        } else {
-                            error()
-                        }
-                    }
-                } else {
-                    error()
-                }
-            }.toDouble()
-        }
 
-        private fun parseArray():JArray {
-            return JArray().apply {
-                next()
-                escapeSpace()
-                if (c != ']') {
-                    loop@ while (true) {
-                        add(parseValue())
-                        escapeSpace()
-                        when (next()) {
-                            ',' -> continue@loop
-                            ']' -> break@loop
-                            else -> error()
-                        }
-                    }
-                }
-            }
-        }
-        private fun parsePair() : Pair<String, Json> {
-            escapeSpace()
-            if (c != '\"') error()
-            val key = parseString()
-            escapeSpace()
-            if (next() != ':') error()
-            val value = parseValue()
-            return key to value
-        }
-        private fun parseObject():JObject {
-            return JObject().apply {
-                next()
-                escapeSpace()
-                if (c != '}') {
-                    loop@ while (true) {
-                        parsePair().let { put(it.first, it.second) }
-                        escapeSpace()
-                        when (next()) {
-                            ',' -> continue@loop
-                            '}' -> break@loop
-                            else -> error()
-                        }
-                    }
-                }
-            }
-        }
-        private fun parseValue() : Json {
-            escapeSpace()
-            return when(c) {
-                '{'->parseObject()
-                '['->parseArray()
-                '\"'->JString(parseString())
-                't'->JBool(parseTrue())
-                'f'->JBool(parseFalse())
-                'n'->parseNull()
-                else->{
-                    if (c=='-'||c=='+'||c in '0'..'9') {
-                        JNumber(parseNumber())
-                    } else {
-                        error()
-                    }
-                }
-            }
-        }
-        fun parse():Json {
-            escapeSpace()
-            return when(c) {
-                '{' -> parseObject()
-                '[' -> parseArray()
-                else -> error()
-            }
-        }
-    }
 }
 
 

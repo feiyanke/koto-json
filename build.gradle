@@ -4,7 +4,7 @@ group 'com.github.feiyanke'
 version '1.0'
 
 buildscript {
-    ext.kotlin_version = '1.1.51'
+    ext.kotlin_version = '1.2.31'
 
     repositories {
         maven { url 'http://maven.aliyun.com/nexus/content/repositories/central/' }
@@ -31,6 +31,7 @@ repositories {
 
 dependencies {
     compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+    compile 'com.google.code.gson:gson:2.8.2'
     examplesCompile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
     examplesCompile sourceSets.main.output
 }
